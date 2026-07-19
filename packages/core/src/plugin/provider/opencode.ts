@@ -169,12 +169,13 @@ export const OpencodePlugin = define<HttpClient.HttpClient | EventV2.Service | S
       const item = catalog.provider.get(ProviderV2.ID.opencode)
       if (!item) return
       const envKey = process.env.OPENCODE_API_KEY
+      const proxyMode = Boolean(process.env.OPENCODE_CONFIG_URL)
       const hasKey = Boolean(envKey || connected || item.provider.request.body.apiKey)
       catalog.provider.update(item.provider.id, (provider) => {
         if (envKey) provider.request.body.apiKey = envKey
         else if (!hasKey) provider.request.body.apiKey = "public"
       })
-      if (hasKey) return
+      if (hasKey && !proxyMode) return
       for (const model of item.models.values()) {
         if (!model.cost.some((cost) => cost.input > 0)) continue
         catalog.model.update(item.provider.id, model.id, (draft) => {
