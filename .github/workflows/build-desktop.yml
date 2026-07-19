@@ -22,18 +22,14 @@ jobs:
           - host: windows-2025
             target: aarch64-pc-windows-msvc
             platform_flag: --win --arm64
-            install_flags: --os=win32 --cpu=arm64
           - host: windows-latest
             target: x86_64-pc-windows-msvc
             platform_flag: --win
-            install_flags: ""
     runs-on: ${{ matrix.arch.host }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - uses: ./.github/actions/setup-bun
-        with:
-          install-flags: ${{ matrix.arch.install_flags }}
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
