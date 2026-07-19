@@ -62,7 +62,10 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
       ...(input.user.system ? [input.user.system] : []),
     ]
       .filter((x) => x)
-      .join("\n"),
+      .join("\n") +
+      (process.env.CAVEMAN === "true"
+        ? "\n\nCRUSH: Respond concise. Drop filler, articles, pleasantries. Keep code exact, technical terms intact. Fragments OK."
+        : ""),
   ]
 
   const header = system[0]
