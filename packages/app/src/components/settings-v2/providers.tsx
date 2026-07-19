@@ -37,6 +37,7 @@ export const SettingsProvidersV2: Component<{ onBack?: () => void }> = (props) =
   const serverSdk = useServerSDK()
   const serverSync = useServerSync()
   const providers = useProviders()
+  const platform = usePlatform()
   const providerConnect = useProviderConnectController({ onBack: props.onBack })
 
   const connect = (provider?: string) => {
