@@ -120,6 +120,15 @@ type PlatformBase = {
 
   /** Record a fatal renderer error in platform logs (desktop only) */
   recordFatalRendererError?(error: FatalRendererErrorLog): Promise<void>
+
+  /** Exchange admin password for a proxy token (desktop only) */
+  exchangeAdminPassword?(password: string): Promise<{ ok: true } | { ok: false; error: string }>
+
+  /** Get proxy configuration status (desktop only) */
+  getProxyStatus?(): Promise<{ configured: boolean; url: string | null }>
+
+  /** Clear stored proxy configuration (desktop only) */
+  clearProxyConfig?(): Promise<void>
 }
 
 export type Platform = PlatformBase &

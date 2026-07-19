@@ -4,12 +4,14 @@ import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { ProviderIcon } from "@opencode-ai/ui/provider-icon"
 import { showToast } from "@/utils/toast"
 import { popularProviders, useProviders } from "@/hooks/use-providers"
-import { createMemo, type Component, For, Show } from "solid-js"
+import { createMemo, createSignal, type Component, For, Show } from "solid-js"
 import { useLanguage } from "@/context/language"
+import { usePlatform } from "@/context/platform"
 import { useServerSDK } from "@/context/server-sdk"
 import { useServerSync } from "@/context/server-sync"
 import { DialogConnectProvider, useProviderConnectController } from "../dialog-connect-provider"
 import { DialogCustomProvider } from "../dialog-custom-provider"
+import { DialogProxySetup } from "../dialog-proxy-setup"
 import { SettingsListV2 } from "./parts/list"
 import "./settings-v2.css"
 
@@ -136,6 +138,9 @@ export const SettingsProvidersV2: Component<{ onBack?: () => void }> = (props) =
       })
   }
 
+  const [proxyStatus, setProxyStatus] = createSignal<{ configured: boolean } | null>(null)
+  void platform().getProxyStatus?.().then(setProxyStatus)
+
   return (
     <>
       <div class="settings-v2-tab-header">
@@ -250,6 +255,38 @@ export const SettingsProvidersV2: Component<{ onBack?: () => void }> = (props) =
           <button type="button" class="settings-v2-providers-view-all" onClick={() => connect()}>
             {language.t("dialog.provider.viewAll")}
           </button>
+        </div>
+
+        <div class="settings-v2-section">
+          <h3 class="settings-v2-section-title">Proxy</h3>
+          <SettingsListV2>
+            <div class="settings-v2-provider-row">
+              <div class="settings-v2-provider-lead">
+                <div class="settings-v2-provider-copy">
+                  <div class="settings-v2-provider-main">
+                    <span class="settings-v2-provider-name">Proxy Fallback</span>
+                    <Show when={proxyStatus()?.configured}>
+                      <Tag>Connected</Tag>
+                    </Show>
+                    <Show when={!proxyStatus()?.configured}>
+                      <Tag>Not configured</Tag>
+                    </Show>
+                  </div>
+                  <p class="settings-v2-provider-description">
+                    API key rotation and rate-limit fallback proxy.
+                  </p>
+                </div>
+              </div>
+              <ButtonV2
+                size="normal"
+                variant="neutral"
+                icon="settings"
+                onClick={() => dialog.show(() => <DialogProxySetup />)}
+              >
+                {proxyStatus()?.configured ? "Manage" : "Setup"}
+              </ButtonV2>
+            </div>
+          </SettingsListV2>
         </div>
       </div>
     </>

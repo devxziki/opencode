@@ -304,6 +304,10 @@ const createPlatform = (windowState: DesktopWindowState): Platform => {
       return window.api.checkAppExists(appName)
     },
 
+    exchangeAdminPassword: (password) => window.api.exchangeAdminPassword(password),
+    getProxyStatus: () => window.api.getProxyStatus(),
+    clearProxyConfig: () => window.api.clearProxyConfig(),
+
     async readClipboardImage() {
       const image = await window.api.readClipboardImage().catch(() => null)
       if (!image) return null

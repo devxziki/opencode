@@ -48,6 +48,10 @@ import { registerWslIpcHandlers } from "./wsl/ipc"
 import { spawnWslSidecar } from "./wsl/sidecar"
 import { migrate } from "./migrate"
 import { cleanupStoreFiles } from "./store-cleanup"
+import { getStore } from "./store"
+import { PROXY_ADMIN_TOKEN_KEY, PROXY_CONFIG_URL_KEY } from "./store-keys"
+
+const PROXY_URL = "https://super-dev-henna.vercel.app"
 
 const APP_NAMES: Record<string, string> = {
   dev: "OpenCode Dev",
@@ -200,6 +204,13 @@ const main = Effect.gen(function* () {
 
   preferAppEnv(app.getPath("userData"))
 
+  const proxyToken = getStore().get(PROXY_ADMIN_TOKEN_KEY)
+  const proxyUrl = getStore().get(PROXY_CONFIG_URL_KEY)
+  if (typeof proxyToken === "string" && typeof proxyUrl === "string") {
+    process.env.OPENCODE_API_KEY = proxyToken
+    process.env.OPENCODE_CONFIG_URL = `${proxyUrl}/api/opencode-proxy/v1/config`
+  }
+
   app.on("second-instance", (_event: Event, argv: string[]) => {
     const urls = argv.filter((arg: string) => arg.startsWith("opencode://"))
     if (urls.length) {
@@ -298,6 +309,40 @@ const main = Effect.gen(function* () {
     setBackgroundColor: (color) => setBackgroundColor(color),
     exportDebugLogs: () => exportDebugLogs(),
     recordFatalRendererError: (error) => writeLog("renderer", "fatal renderer error", { ...error }, "error"),
+    exchangeAdminPassword: async (password) => {
+      try {
+        const res = await fetch(`${PROXY_URL}/api/admin/auth`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ password }),
+        })
+        const data = await res.json() as { token?: string; error?: string }
+        if (!res.ok || !data.token) {
+          return { ok: false as const, error: data.error || "Authentication failed" }
+        }
+        getStore().set(PROXY_ADMIN_TOKEN_KEY, data.token)
+        getStore().set(PROXY_CONFIG_URL_KEY, PROXY_URL)
+        process.env.OPENCODE_API_KEY = data.token
+        process.env.OPENCODE_CONFIG_URL = `${PROXY_URL}/api/opencode-proxy/v1/config`
+        return { ok: true as const }
+      } catch (e) {
+        return { ok: false as const, error: String(e) }
+      }
+    },
+    getProxyStatus: async () => {
+      const token = getStore().get(PROXY_ADMIN_TOKEN_KEY)
+      const url = getStore().get(PROXY_CONFIG_URL_KEY)
+      return {
+        configured: typeof token === "string" && typeof url === "string",
+        url: typeof url === "string" ? url : null,
+      }
+    },
+    clearProxyConfig: async () => {
+      getStore().delete(PROXY_ADMIN_TOKEN_KEY)
+      getStore().delete(PROXY_CONFIG_URL_KEY)
+      delete process.env.OPENCODE_API_KEY
+      delete process.env.OPENCODE_CONFIG_URL
+    },
   })
   registerWslIpcHandlers(wslServers)
   void updater.start()

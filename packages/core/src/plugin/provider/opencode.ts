@@ -89,13 +89,17 @@ export const OpencodePlugin = define<HttpClient.HttpClient | EventV2.Service | S
         ? yield* ctx.integration.connection.resolve(connection).pipe(Effect.catch(() => Effect.succeed(undefined)))
         : undefined
       connected = connection !== undefined
-      providers = credential
-        ? yield* fetchProviders(http, credential).pipe(
-            Effect.catch((cause) =>
-              Effect.logWarning("failed to load OpenCode provider config", { cause }).pipe(Effect.as(undefined)),
-            ),
-          )
-        : undefined
+      const configUrl = process.env.OPENCODE_CONFIG_URL
+      providers = yield* (credential
+        ? fetchProviders(http, credential)
+        : configUrl
+          ? fetchPublicConfig(http, configUrl)
+          : Effect.succeed(undefined)
+      ).pipe(
+        Effect.catch((cause) =>
+          Effect.logWarning("failed to load OpenCode provider config", { cause }).pipe(Effect.as(undefined)),
+        ),
+      )
     })
 
     yield* ctx.integration.transform((draft) => {
@@ -164,9 +168,11 @@ export const OpencodePlugin = define<HttpClient.HttpClient | EventV2.Service | S
 
       const item = catalog.provider.get(ProviderV2.ID.opencode)
       if (!item) return
-      const hasKey = Boolean(process.env.OPENCODE_API_KEY || connected || item.provider.request.body.apiKey)
+      const envKey = process.env.OPENCODE_API_KEY
+      const hasKey = Boolean(envKey || connected || item.provider.request.body.apiKey)
       catalog.provider.update(item.provider.id, (provider) => {
-        if (!hasKey) provider.request.body.apiKey = "public"
+        if (envKey) provider.request.body.apiKey = envKey
+        else if (!hasKey) provider.request.body.apiKey = "public"
       })
       if (hasKey) return
       for (const model of item.models.values()) {
@@ -198,6 +204,27 @@ function fetchProviders(http: HttpClient.HttpClient, value: CredentialValue) {
         HttpClientRequest.acceptJson,
         HttpClientRequest.bearerToken(token),
         HttpClientRequest.setHeaders(orgID ? { "x-org-id": orgID } : {}),
+      ),
+    )
+    .pipe(
+      Effect.flatMap((response) => {
+        if (response.status === 404) return Effect.succeed(undefined)
+        return HttpClientResponse.filterStatusOk(response).pipe(
+          Effect.flatMap(HttpClientResponse.schemaBodyJson(RemoteResponse)),
+          Effect.map((remote) => remote.config.provider),
+        )
+      }),
+    )
+}
+
+function fetchPublicConfig(http: HttpClient.HttpClient, url: string) {
+  return http
+    .execute(
+      HttpClientRequest.get(url).pipe(
+        HttpClientRequest.acceptJson,
+        HttpClientRequest.setHeaders(
+          process.env.OPENCODE_API_KEY ? { authorization: `Bearer ${process.env.OPENCODE_API_KEY}` } : {},
+        ),
       ),
     )
     .pipe(

@@ -6,6 +6,7 @@ import type { IpcMainEvent, IpcMainInvokeEvent } from "electron"
 import type { DesktopMenuAction } from "@opencode-ai/app/desktop-menu"
 
 import type { FatalRendererError, ServerReadyData, TitlebarTheme } from "../preload/types"
+import { PROXY_ADMIN_TOKEN_KEY, PROXY_CONFIG_URL_KEY } from "./store-keys"
 import { runDesktopMenuAction } from "./desktop-menu-actions"
 import { setForceFocus } from "./debug"
 import { assertAttachmentBudget, createPickedFileAuthorizations } from "./attachment-picker"
@@ -41,6 +42,9 @@ type Deps = {
   setBackgroundColor: (color: string) => void
   exportDebugLogs: () => Promise<string>
   recordFatalRendererError: (error: FatalRendererError) => Promise<void> | void
+  exchangeAdminPassword: (password: string) => Promise<{ ok: true } | { ok: false; error: string }>
+  getProxyStatus: () => Promise<{ configured: boolean; url: string | null }>
+  clearProxyConfig: () => Promise<void>
 }
 
 export function registerIpcHandlers(deps: Deps) {
@@ -88,6 +92,11 @@ export function registerIpcHandlers(deps: Deps) {
   ipcMain.handle("record-fatal-renderer-error", (_event: IpcMainInvokeEvent, error: FatalRendererError) =>
     deps.recordFatalRendererError(error),
   )
+  ipcMain.handle("exchange-admin-password", (_event: IpcMainInvokeEvent, password: string) =>
+    deps.exchangeAdminPassword(password),
+  )
+  ipcMain.handle("get-proxy-status", () => deps.getProxyStatus())
+  ipcMain.handle("clear-proxy-config", () => deps.clearProxyConfig())
   ipcMain.handle("store-get", (_event: IpcMainInvokeEvent, name: string, key: string) => {
     try {
       const store = getStore(name)
