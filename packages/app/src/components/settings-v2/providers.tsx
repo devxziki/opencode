@@ -140,7 +140,9 @@ export const SettingsProvidersV2: Component<{ onBack?: () => void }> = (props) =
   }
 
   const [proxyStatus, setProxyStatus] = createSignal<{ configured: boolean } | null>(null)
-  void platform().getProxyStatus?.().then(setProxyStatus)
+  try {
+    void platform.getProxyStatus?.()?.then(setProxyStatus)
+  } catch {} /* ignore - proxy methods only available in desktop */
 
   return (
     <>

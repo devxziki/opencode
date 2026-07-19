@@ -99,7 +99,6 @@ const getBase = (appId: string, productName: string): Configuration => ({
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
     shortcutName: productName,
-    guid: appId,
   },
   linux: {
     icon: `resources/icons`,
