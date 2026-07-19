@@ -38,7 +38,13 @@ const APP_IDS = {
   prod: "ai.opencode.desktop",
 } as const
 
-const getBase = (appId: string): Configuration => ({
+const PRODUCT_NAMES = {
+  dev: "OpenCode Dev",
+  beta: "OpenCode Beta",
+  prod: "OpenCode",
+} as const
+
+const getBase = (appId: string, productName: string): Configuration => ({
   artifactName: "opencode-desktop-${os}-${arch}.${ext}",
   directories: {
     output: "dist",
@@ -88,8 +94,12 @@ const getBase = (appId: string): Configuration => ({
   nsis: {
     oneClick: true,
     perMachine: false,
-    installerIcon: `resources/icons/icon.ico`,
-    installerHeaderIcon: `resources/icons/icon.ico`,
+    installerIcon: "icons/icon.ico",
+    installerHeaderIcon: "icons/icon.ico",
+    createDesktopShortcut: true,
+    createStartMenuShortcut: true,
+    shortcutName: productName,
+    guid: appId,
   },
   linux: {
     icon: `resources/icons`,
@@ -108,14 +118,15 @@ const getBase = (appId: string): Configuration => ({
 
 function getConfig() {
   const appId = APP_IDS[channel]
-  const base = getBase(appId)
+  const productName = PRODUCT_NAMES[channel]
+  const base = getBase(appId, productName)
 
   switch (channel) {
     case "dev": {
       return {
         ...base,
         appId,
-        productName: "OpenCode Dev",
+        productName,
         rpm: { packageName: "opencode-dev" },
       }
     }
@@ -123,7 +134,7 @@ function getConfig() {
       return {
         ...base,
         appId,
-        productName: "OpenCode Beta",
+        productName,
         protocols: { name: "OpenCode Beta", schemes: ["opencode"] },
         publish: { provider: "github", owner: "anomalyco", repo: "opencode-beta", channel: "latest" },
         rpm: { packageName: "opencode-beta" },
@@ -133,7 +144,7 @@ function getConfig() {
       return {
         ...base,
         appId,
-        productName: "OpenCode",
+        productName,
         protocols: { name: "OpenCode", schemes: ["opencode"] },
         publish: { provider: "github", owner: "anomalyco", repo: "opencode", channel: "latest" },
         deb: { fpm: [legacyDesktopEntryFpm] },
